@@ -1,18 +1,18 @@
-import itertools
+"""Module containing helper functions."""
+import os
 
-import numpy as np
-import torch
 import matplotlib
 import matplotlib.pyplot as plt
-
-import os
+import numpy as np
 import seaborn as sns
+import torch
+
 from consts import MODELS
 
 matplotlib.style.use('ggplot')
 
 
-def save_model(epochs, model, optimizer, criterion, model_name):
+def save_model(epochs: int, model, optimizer, criterion, model_name: str):
     """
     Function to save the trained model to disk.
     """
@@ -26,6 +26,7 @@ def save_model(epochs, model, optimizer, criterion, model_name):
 
 def plot_confusion_matrix(confusion_matrix, y_val,
                           cmap=plt.cm.Blues):
+    """Function to save plotted confusion matrix heatmap to disk."""
     classes = np.unique(y_val)
 
     plt.figure(figsize=(12, 10))

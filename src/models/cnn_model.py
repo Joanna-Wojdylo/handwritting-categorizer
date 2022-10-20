@@ -1,9 +1,11 @@
-import torch
+"""The module containing the model class. """
 import torch.nn as nn
 import torch.nn.functional as F
 
 
 class CNN(nn.Module):
+    """A class of CNN model, it contains three convolutional layers, ReLU activations, dropout layers for training,
+    and two linear layers ended with softmax. """
     def __init__(self):
         super(CNN, self).__init__()
         self.conv1 = nn.Conv2d(1, 32, kernel_size=5)

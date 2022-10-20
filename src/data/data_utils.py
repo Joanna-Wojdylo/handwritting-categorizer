@@ -1,3 +1,4 @@
+"""Module containing data-related helper functions."""
 import logging
 import os
 import pickle
@@ -18,6 +19,7 @@ Loader: TypeAlias = torch.utils.data.dataloader.DataLoader
 
 
 def unpickle_file(file_name: str = RAW_DATA_FILE, image_size: int = IMAGE_SIZE) -> tuple[np.ndarray, np.ndarray]:
+    """ Function used to read .pkl file and reshape arrays."""
     with open(os.path.join(RAW_DIR, file_name), 'rb') as file:
         (x_all, y_all) = pickle.load(file)
         x_all = np.reshape(x_all, (-1, 1, image_size, image_size))
@@ -30,6 +32,8 @@ def unpickle_file(file_name: str = RAW_DATA_FILE, image_size: int = IMAGE_SIZE) 
 
 def prepare_dataloader(x_array: np.ndarray, y_array: np.ndarray, weighted_random_sampler: bool, batch_size: int = 32) \
         -> Loader:
+    """Function used to prepare DataLoaders from numpy arrays,
+     optional use of WeightedRandomSampler to deal with imbalanced datasets."""
     torch_x_array = torch.from_numpy(x_array).type(torch.FloatTensor)
     torch_y_array = torch.from_numpy(y_array).type(torch.LongTensor)
     tensor_dataset = torch.utils.data.TensorDataset(torch_x_array, torch_y_array)
@@ -48,6 +52,8 @@ def prepare_dataloader(x_array: np.ndarray, y_array: np.ndarray, weighted_random
 
 def prepare_training_data(test_size: float = 0.1) -> \
         tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, Loader, Loader]:
+    """Fucntion used to prepare training data.
+    Returns training and validation numpy arrays as well as ready-to-use DataLoaders."""
     x_all, y_all = unpickle_file()
     random_seed = 234  # passing a const int for reproducible outputs across multiple function calls
     x_train, x_val, y_train, y_val = train_test_split(x_all, y_all, test_size=test_size, random_state=random_seed)

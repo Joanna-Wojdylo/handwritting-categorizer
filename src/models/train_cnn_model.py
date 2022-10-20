@@ -1,15 +1,15 @@
-import torch
+"""A module for training a model on training data and checking it on validation data."""
 import argparse
-import torch.nn as nn
-import torch.optim as optim
-import time
 import logging
 
-from tqdm.auto import tqdm
+import torch
+import torch.nn as nn
+import torch.optim as optim
 from sklearn.metrics import confusion_matrix
+from tqdm.auto import tqdm
 
+from src.data.data_utils import prepare_training_data, Loader
 from src.models.cnn_model import CNN
-from src.data.data_utils import prepare_training_data
 from src.models.utils import save_model, save_plots, plot_confusion_matrix
 
 logger = logging.getLogger()
@@ -28,7 +28,16 @@ args = vars(parser.parse_args())
 
 
 # Training function.
-def train(model, trainloader, optimizer, criterion):
+def train(model, trainloader: Loader, optimizer, criterion) -> tuple[float, float]:
+    """
+    A function used to train the model, the model error is calculated,
+     which is then propagated backwards to update the model weights.
+    :param model:
+    :param trainloader: DataLoader with training data
+    :param optimizer: Optimizer, SGD.
+    :param criterion: Optimization criterion, Cross Entropy.
+    :return:
+    """
     model.train()
     print('Training')
     train_running_loss = 0.0
@@ -60,7 +69,14 @@ def train(model, trainloader, optimizer, criterion):
 
 
 # Validation function.
-def validate(model, valloader, criterion):
+def validate(model, valloader, criterion) -> tuple[float, float, torch.LongTensor]:
+    """
+    A function used for model validation, model accuracy and error function are calculated.
+    :param model:
+    :param valloader: DataLoader for validation set
+    :param criterion: Optimization criterion, Cross Entropy
+    :return:
+    """
     model.eval()
     print('Validation')
     valid_running_loss = 0.0
