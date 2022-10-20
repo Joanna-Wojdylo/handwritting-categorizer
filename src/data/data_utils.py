@@ -46,7 +46,8 @@ def prepare_dataloader(x_array: np.ndarray, y_array: np.ndarray, weighted_random
     return data_loader
 
 
-def prepare_training_data(test_size: float = 0.1) -> tuple[Loader, Loader]:
+def prepare_training_data(test_size: float = 0.1) -> \
+        tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, Loader, Loader]:
     x_all, y_all = unpickle_file()
     random_seed = 234  # passing a const int for reproducible outputs across multiple function calls
     x_train, x_val, y_train, y_val = train_test_split(x_all, y_all, test_size=test_size, random_state=random_seed)
@@ -55,7 +56,7 @@ def prepare_training_data(test_size: float = 0.1) -> tuple[Loader, Loader]:
     train_loader = prepare_dataloader(x_train, y_train, weighted_random_sampler=True)
     val_loader = prepare_dataloader(x_val, y_val, weighted_random_sampler=False)
     logger.info("DataLoaders prepared")
-    return train_loader, val_loader
+    return x_train, x_val, y_train, y_val, train_loader, val_loader
 
 
 if __name__ == "__main__":

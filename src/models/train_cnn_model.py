@@ -6,10 +6,11 @@ import time
 import logging
 
 from tqdm.auto import tqdm
+from sklearn.metrics import confusion_matrix
 
 from src.models.cnn_model import CNN
 from src.data.data_utils import prepare_training_data
-from src.models.utils import save_model, save_plots
+from src.models.utils import save_model, save_plots, plot_confusion_matrix
 
 logger = logging.getLogger()
 # Construct the argument parser.
@@ -65,6 +66,7 @@ def validate(model, valloader, criterion):
     valid_running_loss = 0.0
     valid_running_correct = 0
     counter = 0
+    val_preds = torch.LongTensor().cuda()
     with torch.no_grad():
         for i, data in tqdm(enumerate(valloader), total=len(valloader)):
             counter += 1
@@ -81,15 +83,18 @@ def validate(model, valloader, criterion):
             _, preds = torch.max(outputs.data, 1)
             valid_running_correct += (preds == labels).sum().item()
 
+            # Store val_predictions with probas for confusion matrix calculations
+            val_preds = torch.cat((val_preds, preds), dim=0)
+
     # Loss and accuracy for the complete epoch.
     epoch_loss = valid_running_loss / counter
     epoch_acc = 100. * (valid_running_correct / len(valloader.dataset))
-    return epoch_loss, epoch_acc
+    return epoch_loss, epoch_acc, val_preds
 
 
 if __name__ == '__main__':
     # Load the training and validation data loaders.
-    train_loader, valid_loader = prepare_training_data(test_size=0.1)
+    x_train, x_val, y_train, y_val, train_loader, valid_loader = prepare_training_data(test_size=0.1)
 
     # Learning_parameters.
     lr = args['learning_rate']
@@ -118,17 +123,19 @@ if __name__ == '__main__':
     # Lists to keep track of losses and accuracies.
     train_loss, valid_loss = [], []
     train_acc, valid_acc = [], []
+    valid_preds = []
     # Start the training.
     for epoch in range(epochs):
         print(f"[INFO]: Epoch {epoch + 1} of {epochs}")
         train_epoch_loss, train_epoch_acc = train(model, train_loader,
                                                   optimizer, criterion)
-        valid_epoch_loss, valid_epoch_acc = validate(model, valid_loader,
-                                                     criterion)
+        valid_epoch_loss, valid_epoch_acc, valid_epoch_preds = validate(model, valid_loader,
+                                                                        criterion)
         train_loss.append(train_epoch_loss)
         valid_loss.append(valid_epoch_loss)
         train_acc.append(train_epoch_acc)
         valid_acc.append(valid_epoch_acc)
+        valid_preds.append(valid_epoch_preds)
         print(f"Training loss: {train_epoch_loss:.3f}, training acc: {train_epoch_acc:.3f}")
         print(f"Validation loss: {valid_epoch_loss:.3f}, validation acc: {valid_epoch_acc:.3f}")
         print('-' * 50)
@@ -137,4 +144,8 @@ if __name__ == '__main__':
     save_model(epochs, model, optimizer, criterion, model_name="basic_cnn")
     # Save the loss and accuracy plots.
     save_plots(train_acc, valid_acc, train_loss, valid_loss)
+    # Plot confusion matrix
+    y_pred_classes = valid_preds[epochs - 1].cpu().numpy().ravel()
+    cm = confusion_matrix(y_val, y_pred_classes)
+    plot_confusion_matrix(cm, y_val)
     print('TRAINING COMPLETE')
