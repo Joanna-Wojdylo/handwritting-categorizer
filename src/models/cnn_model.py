@@ -16,11 +16,11 @@ class CNN(nn.Module):
 
     def forward(self, x):
         x = F.relu(self.conv1(x))
-        x = F.dropout(x, p=0.5, training=self.training)
+        x = F.dropout(x, p=0.25, training=self.training)
         x = F.relu(F.max_pool2d(self.conv2(x), 2))
-        x = F.dropout(x, p=0.5, training=self.training)
+        x = F.dropout(x, p=0.25, training=self.training)
         x = F.relu(F.max_pool2d(self.conv3(x), 2))
-        x = F.dropout(x, p=0.5, training=self.training)
+        x = F.dropout(x, p=0.25, training=self.training)
         x = x.view(-1, 10 * 10 * 64)
         x = F.relu(self.fc1(x))
         x = F.dropout(x, training=self.training)

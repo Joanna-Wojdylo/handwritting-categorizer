@@ -2,10 +2,11 @@
 import argparse
 import logging
 
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from sklearn.metrics import confusion_matrix
+from sklearn.metrics import confusion_matrix, f1_score
 from tqdm.auto import tqdm
 
 from src.data.data_utils import prepare_training_data, Loader
@@ -28,7 +29,7 @@ args = vars(parser.parse_args())
 
 
 # Training function.
-def train(model, trainloader: Loader, optimizer, criterion) -> tuple[float, float]:
+def train(model, trainloader: Loader, optimizer, criterion) -> tuple[float, float, float]:
     """
     A function used to train the model, the model error is calculated,
      which is then propagated backwards to update the model weights.
@@ -43,6 +44,8 @@ def train(model, trainloader: Loader, optimizer, criterion) -> tuple[float, floa
     train_running_loss = 0.0
     train_running_correct = 0
     counter = 0
+    y_true = []
+    y_pred = []
     for i, data in tqdm(enumerate(trainloader), total=len(trainloader)):
         counter += 1
         image, labels = data
@@ -62,14 +65,18 @@ def train(model, trainloader: Loader, optimizer, criterion) -> tuple[float, floa
         # Update the weights.
         optimizer.step()
 
+        y_true.extend(labels.detach().cpu().numpy())
+        y_pred.extend(preds.detach().cpu().numpy())
+
     # Loss and accuracy for the complete epoch.
     epoch_loss = train_running_loss / counter
     epoch_acc = 100. * (train_running_correct / len(trainloader.dataset))
-    return epoch_loss, epoch_acc
+    epoch_f1_score = f1_score(y_true, y_pred, average="weighted")
+    return epoch_loss, epoch_acc, epoch_f1_score
 
 
 # Validation function.
-def validate(model, valloader, criterion) -> tuple[float, float, torch.LongTensor]:
+def validate(model, valloader, criterion) -> tuple[float, float, float, list]:
     """
     A function used for model validation, model accuracy and error function are calculated.
     :param model:
@@ -82,7 +89,8 @@ def validate(model, valloader, criterion) -> tuple[float, float, torch.LongTenso
     valid_running_loss = 0.0
     valid_running_correct = 0
     counter = 0
-    val_preds = torch.LongTensor().cuda()
+    y_true = []
+    y_pred = []
     with torch.no_grad():
         for i, data in tqdm(enumerate(valloader), total=len(valloader)):
             counter += 1
@@ -99,13 +107,15 @@ def validate(model, valloader, criterion) -> tuple[float, float, torch.LongTenso
             _, preds = torch.max(outputs.data, 1)
             valid_running_correct += (preds == labels).sum().item()
 
-            # Store val_predictions with probas for confusion matrix calculations
-            val_preds = torch.cat((val_preds, preds), dim=0)
+            # Store val_predictions for confusion matrix calculations and f1-score
+            y_true.extend(labels.detach().cpu().numpy())
+            y_pred.extend(preds.detach().cpu().numpy())
 
     # Loss and accuracy for the complete epoch.
     epoch_loss = valid_running_loss / counter
     epoch_acc = 100. * (valid_running_correct / len(valloader.dataset))
-    return epoch_loss, epoch_acc, val_preds
+    epoch_f1_score = f1_score(y_true, y_pred, average="weighted")
+    return epoch_loss, epoch_acc, epoch_f1_score, y_pred
 
 
 if __name__ == '__main__':
@@ -139,29 +149,34 @@ if __name__ == '__main__':
     # Lists to keep track of losses and accuracies.
     train_loss, valid_loss = [], []
     train_acc, valid_acc = [], []
+    train_f1_score, valid_f1_score = [], []
     valid_preds = []
     # Start the training.
     for epoch in range(epochs):
         print(f"[INFO]: Epoch {epoch + 1} of {epochs}")
-        train_epoch_loss, train_epoch_acc = train(model, train_loader,
-                                                  optimizer, criterion)
-        valid_epoch_loss, valid_epoch_acc, valid_epoch_preds = validate(model, valid_loader,
-                                                                        criterion)
+        train_epoch_loss, train_epoch_acc, train_epoch_f1_score = train(model, train_loader,
+                                                                        optimizer, criterion)
+        valid_epoch_loss, valid_epoch_acc, valid_epoch_f1_score, valid_epoch_preds = validate(model, valid_loader,
+                                                                                              criterion)
         train_loss.append(train_epoch_loss)
         valid_loss.append(valid_epoch_loss)
         train_acc.append(train_epoch_acc)
         valid_acc.append(valid_epoch_acc)
         valid_preds.append(valid_epoch_preds)
-        print(f"Training loss: {train_epoch_loss:.3f}, training acc: {train_epoch_acc:.3f}")
-        print(f"Validation loss: {valid_epoch_loss:.3f}, validation acc: {valid_epoch_acc:.3f}")
+        train_f1_score.append(train_epoch_f1_score)
+        valid_f1_score.append(valid_epoch_f1_score)
+        print(
+            f"Training loss: {train_epoch_loss:.3f}, training acc: {train_epoch_acc:.3f}, training f1-score: {train_epoch_f1_score:.3f}")
+        print(
+            f"Validation loss: {valid_epoch_loss:.3f}, validation acc: {valid_epoch_acc:.3f}, validation f1-score: {train_epoch_f1_score:.3f}")
         print('-' * 50)
 
     # Save the trained model weights.
     save_model(epochs, model, optimizer, criterion, model_name="basic_cnn")
     # Save the loss and accuracy plots.
-    save_plots(train_acc, valid_acc, train_loss, valid_loss)
+    save_plots(train_acc, valid_acc, train_loss, valid_loss, train_f1_score, valid_f1_score)
     # Plot confusion matrix
-    y_pred_classes = valid_preds[epochs - 1].cpu().numpy().ravel()
+    y_pred_classes = np.array(valid_preds[-1])
     cm = confusion_matrix(y_val, y_pred_classes)
     plot_confusion_matrix(cm, y_val)
     print('TRAINING COMPLETE')

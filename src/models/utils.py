@@ -45,7 +45,7 @@ def plot_confusion_matrix(confusion_matrix, y_val,
     fig.savefig(os.path.join(MODELS, "confusion_matrix.png"))
 
 
-def save_plots(train_acc, valid_acc, train_loss, valid_loss):
+def save_plots(train_acc, valid_acc, train_loss, valid_loss, train_f1_score, valid_f1_score):
     """
     Function to save the loss and accuracy plots to disk.
     """
@@ -78,3 +78,18 @@ def save_plots(train_acc, valid_acc, train_loss, valid_loss):
     plt.ylabel('Loss')
     plt.legend()
     plt.savefig(os.path.join(MODELS, "loss.png"))
+
+    # F1 score plots.
+    plt.figure(figsize=(10, 7))
+    plt.plot(
+        train_f1_score, color='purple', linestyle='-',
+        label='train f1 score'
+    )
+    plt.plot(
+        valid_f1_score, color='olive', linestyle='-',
+        label='validataion f1 score'
+    )
+    plt.xlabel('Epochs')
+    plt.ylabel('F1 Score')
+    plt.legend()
+    plt.savefig(os.path.join(MODELS, "f1-score.png"))

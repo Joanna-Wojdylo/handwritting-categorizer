@@ -4,10 +4,14 @@ import pickle
 
 import numpy as np
 import torch
+from matplotlib import pyplot as plt
 
 from consts import MODELS
 from consts import RAW_DIR, IMAGE_SIZE
 from src.models.cnn_model import CNN
+from src.models.utils import plot_confusion_matrix
+from sklearn.metrics import confusion_matrix, f1_score
+import seaborn as sns
 
 
 # This is just an example to simulate some data with appropriate shape,
@@ -26,6 +30,7 @@ def predict(model_name: str, input_data: np.ndarray, image_size: int = IMAGE_SIZ
     :return: Nx1 numpy array with the labels predicted by the model
     """
     device = ('cuda' if torch.cuda.is_available() else 'cpu')
+    torch.cuda.empty_cache()
 
     input_data = np.reshape(input_data, (-1, 1, image_size, image_size))
     torch_input_data = torch.from_numpy(input_data).type(torch.FloatTensor)
@@ -43,5 +48,31 @@ def predict(model_name: str, input_data: np.ndarray, image_size: int = IMAGE_SIZ
     return predicted
 
 
+def predict_and_test(model_name: str, input_data: np.ndarray, labels_to_check: np.ndarray, image_size: int = IMAGE_SIZE):
+    predicted_labels = predict(model_name=model_name, input_data=input_data, image_size=image_size)
+    predicted_correctly = (predicted_labels == labels_to_check).sum().item()
+    prediction_acc = 100. * (predicted_correctly / len(labels_to_check))
+    print(f"Test accuracy: {prediction_acc}%")
+    prediction_f1_score = f1_score(predicted_labels, labels_to_check, average="weighted")
+    print(f"Test F1-score: {prediction_f1_score}%")
+    cm = confusion_matrix(predicted_labels, labels_to_check)
+    classes = np.unique(labels_to_check)
+
+    plt.figure(figsize=(12, 10))
+    plt.title('Confusion matrix')
+    sns.heatmap(
+        cm,
+        annot=True,
+        xticklabels=classes,
+        yticklabels=classes,
+        cmap="Blues",
+        fmt='d'
+    )
+    plt.ylabel('True label')
+    plt.xlabel('Predicted label')
+    plt.show()
+
+
 if __name__ == "__main__":
-    predict(model_name="basic_cnn", input_data=input_data_test)
+    # predict(model_name="basic_cnn", input_data=input_data_test)
+    predict_and_test(model_name="basic_cnn", input_data=input_data_test, labels_to_check=y_all[-4000:])
