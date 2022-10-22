@@ -67,5 +67,3 @@ def prepare_training_data(test_size: float = 0.1) -> \
 
 if __name__ == "__main__":
     prepare_training_data()
-
-

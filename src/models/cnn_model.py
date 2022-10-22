@@ -1,4 +1,4 @@
-"""The module containing the model class. """
+"""The module containing the CNN model class. """
 import torch.nn as nn
 import torch.nn.functional as F
 
