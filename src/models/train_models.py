@@ -9,9 +9,12 @@ import torch.optim as optim
 from sklearn.metrics import confusion_matrix, f1_score
 from tqdm.auto import tqdm
 
+from consts import IMAGE_SIZE
 from src.data.data_utils import prepare_training_data, Loader
 from src.models.cnn_model import CNN
+from src.models.resnet_model import MnistResNet
 from src.models.utils import save_model, save_plots, plot_confusion_matrix
+from src.models.vision_transformer_model import ViT
 
 logger = logging.getLogger()
 # Construct the argument parser.
@@ -29,15 +32,16 @@ args = vars(parser.parse_args())
 
 
 # Training function.
-def train(model, trainloader: Loader, optimizer, criterion) -> tuple[float, float, float]:
+def train(model, trainloader: Loader, optimizer, criterion, device) -> tuple[float, float, float]:
     """
     A function used to train the model, the model error is calculated,
      which is then propagated backwards to update the model weights.
-    :param model:
+    :param device: torch device for calculations, cuda recommended
+    :param model: instance of a pytorch model class
     :param trainloader: DataLoader with training data
-    :param optimizer: Optimizer, SGD.
-    :param criterion: Optimization criterion, Cross Entropy.
-    :return:
+    :param optimizer: Optimizer, SGD
+    :param criterion: Optimization criterion, Cross Entropy
+    :return: loss function result, accuracy and f1_score calculated for the epochs
     """
     model.train()
     print('Training')
@@ -76,13 +80,14 @@ def train(model, trainloader: Loader, optimizer, criterion) -> tuple[float, floa
 
 
 # Validation function.
-def validate(model, valloader, criterion) -> tuple[float, float, float, list]:
+def validate(model, valloader: Loader, criterion, device) -> tuple[float, float, float, list[int, ...]]:
     """
     A function used for model validation, model accuracy and error function are calculated.
-    :param model:
+    :param device: torch device for calculations, cuda recommended
+    :param model: instance of a pytorch model class
     :param valloader: DataLoader for validation set
     :param criterion: Optimization criterion, Cross Entropy
-    :return:
+    :return: loss function result, accuracy and f1_score calculated for the epochs, list of predicted values
     """
     model.eval()
     print('Validation')
@@ -118,7 +123,13 @@ def validate(model, valloader, criterion) -> tuple[float, float, float, list]:
     return epoch_loss, epoch_acc, epoch_f1_score, y_pred
 
 
-if __name__ == '__main__':
+def train_and_validate_model(model_selection: str):
+    """
+    A function that encapsulates the entire model training and validation process. After the training is finished,
+    the graphs of learning curves, accuracy, f1 score and also confusion matrix of the validation set are saved to
+    disk.
+    :param model_selection: Name of the model to train, possible options: "cnn", "resnet", "vit"
+    """
     # Load the training and validation data loaders.
     x_train, x_val, y_train, y_val, train_loader, valid_loader = prepare_training_data(test_size=0.1)
 
@@ -130,8 +141,19 @@ if __name__ == '__main__':
     print(f"Learning rate: {lr}")
     print(f"Epochs to train for: {epochs}\n")
 
-    model = CNN().to(device)
-    logger.info(f"CNN model: {model}")
+    # Basic example of a new match case statement :)
+    match model_selection:
+        case "cnn":
+            model = CNN().to(device)
+        case "resnet":
+            model = MnistResNet().to(device)
+        case "vit":
+            model = ViT(image_size=IMAGE_SIZE, patch_size=7, num_classes=36, channels=1,
+                        dim=64, depth=6, heads=8, mlp_dim=128).to(device)
+        case _:
+            print("No match found. Please use one of the available models: 'cnn', 'resnet' or 'vit.")
+
+    logger.info(f"Model architecture: {model}")
 
     # Total parameters and trainable parameters.
     total_params = sum(p.numel() for p in model.parameters())
@@ -155,9 +177,9 @@ if __name__ == '__main__':
     for epoch in range(epochs):
         print(f"[INFO]: Epoch {epoch + 1} of {epochs}")
         train_epoch_loss, train_epoch_acc, train_epoch_f1_score = train(model, train_loader,
-                                                                        optimizer, criterion)
+                                                                        optimizer, criterion, device)
         valid_epoch_loss, valid_epoch_acc, valid_epoch_f1_score, valid_epoch_preds = validate(model, valid_loader,
-                                                                                              criterion)
+                                                                                              criterion, device)
         train_loss.append(train_epoch_loss)
         valid_loss.append(valid_epoch_loss)
         train_acc.append(train_epoch_acc)
@@ -172,7 +194,7 @@ if __name__ == '__main__':
         print('-' * 50)
 
     # Save the trained model weights.
-    save_model(epochs, model, optimizer, criterion, model_name="basic_cnn")
+    save_model(epochs, model, optimizer, criterion, model_name=model_selection)
     # Save the loss and accuracy plots.
     save_plots(train_acc, valid_acc, train_loss, valid_loss, train_f1_score, valid_f1_score)
     # Plot confusion matrix
@@ -180,3 +202,7 @@ if __name__ == '__main__':
     cm = confusion_matrix(y_val, y_pred_classes)
     plot_confusion_matrix(cm, y_val)
     print('TRAINING COMPLETE')
+
+
+if __name__ == '__main__':
+    train_and_validate_model("resnet")

@@ -3,16 +3,14 @@ import os
 import pickle
 
 import numpy as np
+import seaborn as sns
 import torch
 from matplotlib import pyplot as plt
+from sklearn.metrics import confusion_matrix, f1_score
 
 from consts import MODELS
 from consts import RAW_DIR, IMAGE_SIZE
 from src.models.cnn_model import CNN
-from src.models.utils import plot_confusion_matrix
-from sklearn.metrics import confusion_matrix, f1_score
-import seaborn as sns
-
 
 # This is just an example to simulate some data with appropriate shape,
 # this is NOT the actual test data
@@ -49,6 +47,14 @@ def predict(model_name: str, input_data: np.ndarray, image_size: int = IMAGE_SIZ
 
 
 def predict_and_test(model_name: str, input_data: np.ndarray, labels_to_check: np.ndarray, image_size: int = IMAGE_SIZE):
+    """
+    Function used to predict labels for given data and test it agains array of actual labels to check. Accuracy and
+    F1-score are calculated, then confusion matrix is shown.
+    :param model_name: name of the .pth file with the trained model, stored in data/raw location
+    :param input_data: Nx3136 numpy array of test examples
+    :param labels_to_check: Nx1 numpy array with the actual labels to check
+    :param image_size: size of the input images
+    """
     predicted_labels = predict(model_name=model_name, input_data=input_data, image_size=image_size)
     predicted_correctly = (predicted_labels == labels_to_check).sum().item()
     prediction_acc = 100. * (predicted_correctly / len(labels_to_check))

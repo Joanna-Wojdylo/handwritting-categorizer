@@ -7,9 +7,13 @@ import numpy as np
 import seaborn as sns
 import torch
 
+from typing import TypeAlias
+
 from consts import MODELS
 
 matplotlib.style.use('ggplot')
+
+FloatsList: TypeAlias = list[float, ...]
 
 
 def save_model(epochs: int, model, optimizer, criterion, model_name: str):
@@ -24,7 +28,7 @@ def save_model(epochs: int, model, optimizer, criterion, model_name: str):
                 }, os.path.join(MODELS, model_name+".pth"))
 
 
-def plot_confusion_matrix(confusion_matrix, y_val,
+def plot_confusion_matrix(confusion_matrix: np.ndarray, y_val: np.ndarray,
                           cmap=plt.cm.Blues):
     """Function to save plotted confusion matrix heatmap to disk."""
     classes = np.unique(y_val)
@@ -45,7 +49,8 @@ def plot_confusion_matrix(confusion_matrix, y_val,
     fig.savefig(os.path.join(MODELS, "confusion_matrix.png"))
 
 
-def save_plots(train_acc, valid_acc, train_loss, valid_loss, train_f1_score, valid_f1_score):
+def save_plots(train_acc: FloatsList, valid_acc: FloatsList, train_loss: FloatsList, valid_loss: FloatsList,
+               train_f1_score: FloatsList, valid_f1_score: FloatsList):
     """
     Function to save the loss and accuracy plots to disk.
     """
