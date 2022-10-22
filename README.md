@@ -1,7 +1,8 @@
 handwritting-categorizer
 ==============================
 
-A short description of the project.
+When running programs locally, always make sure that the working directory is set to the project root directory.
+![img.png](img.png)
 
 Project Organization
 ------------
